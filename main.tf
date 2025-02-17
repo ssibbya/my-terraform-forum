@@ -62,6 +62,3 @@ resource "aws_db_instance" "forum_db" {
   db_subnet_group_name   = aws_subnet.private_subnet.id
   skip_final_snapshot = true
 }
-
-variable "aws_region" {}
-variable "aws_role_arn" {}
