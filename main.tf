@@ -43,12 +43,36 @@ resource "aws_lb" "forum_alb" {
   subnets            = [aws_subnet.public_subnet.id]
 }
 
+# Launch Template
+resource "aws_launch_template" "forum_lt" {
+  name_prefix   = "forum-template"
+  image_id      = "ami-053a45fff0a704a47"
+  instance_type = "t2.micro"
+
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups             = [aws_security_group.forum_sg.id]
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
+      Name = "ForumInstance"
+    }
+  }
+}
+
 # Auto Scaling Group
 resource "aws_autoscaling_group" "forum_asg" {
   vpc_zone_identifier = [aws_subnet.public_subnet.id]
   desired_capacity    = 2
   min_size           = 1
   max_size           = 3
+
+  launch_template {
+    id      = aws_launch_template.forum_lt.id
+    version = "$Latest"
+  }
 }
 
 # RDS Database
