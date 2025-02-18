@@ -7,22 +7,34 @@ resource "aws_vpc" "forum_vpc" {
   cidr_block = "10.1.0.0/16"
 }
 
-# Subnets
-resource "aws_subnet" "public_subnet" {
-  vpc_id     = aws_vpc.forum_vpc.id
-  cidr_block = "10.1.1.0/24"
+# Public Subnet 1 in us-east-1a
+resource "aws_subnet" "public_subnet_1" {
+  vpc_id                  = aws_vpc.forum_vpc.id
+  cidr_block              = "10.1.1.0/24"
+  availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
 }
-# Public Subnet 2 (New Subnet in Different AZ)
+
+# Public Subnet 2 in us-east-1b
 resource "aws_subnet" "public_subnet_2" {
   vpc_id                  = aws_vpc.forum_vpc.id
   cidr_block              = "10.1.3.0/24"
-  availability_zone       = "us-east-1b" # Change based on your AWS region
+  availability_zone       = "us-east-1b"
   map_public_ip_on_launch = true
 }
-resource "aws_subnet" "private_subnet" {
-  vpc_id     = aws_vpc.forum_vpc.id
-  cidr_block = "10.1.2.0/24"
+
+# Private Subnet 1 (for RDS)
+resource "aws_subnet" "private_subnet_1" {
+  vpc_id                  = aws_vpc.forum_vpc.id
+  cidr_block              = "10.1.2.0/24"
+  availability_zone       = "us-east-1a"
+}
+
+# Private Subnet 2 (for RDS in different AZ)
+resource "aws_subnet" "private_subnet_2" {
+  vpc_id                  = aws_vpc.forum_vpc.id
+  cidr_block              = "10.1.4.0/24"
+  availability_zone       = "us-east-1b"
 }
 
 # Security Group
@@ -37,13 +49,13 @@ resource "aws_security_group" "forum_sg" {
   }
 }
 
-# Application Load Balancer
+# Modify ALB to use both subnets
 resource "aws_lb" "forum_alb" {
   name               = "forum-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.forum_sg.id]
-  subnets            = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id] # Use both subnets
+  subnets            = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
 }
 
 # Launch Template
@@ -77,16 +89,15 @@ resource "aws_autoscaling_group" "forum_asg" {
     version = "$Latest"
   }
 }
+
+# DB Subnet Group for RDS
 resource "aws_db_subnet_group" "forum_db_subnet_group" {
   name       = "forum-db-subnet-group"
-  subnet_ids = [aws_subnet.private_subnet.id] # Add more private subnets if needed
-  description = "DB subnet group for forum application"
-
-  tags = {
-    Name = "forum-db-subnet-group"
-  }
+  subnet_ids = [aws_subnet.private_subnet_1.id, aws_subnet.private_subnet_2.id] # Two subnets in different AZs
+  description = "Subnet group for forum database"
 }
-# RDS Database
+
+# Modify RDS to reference the DB subnet group
 resource "aws_db_instance" "forum_db" {
   allocated_storage    = 20
   engine              = "mysql"
