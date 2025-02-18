@@ -26,14 +26,14 @@ resource "aws_subnet" "public_subnet_2" {
 # Private Subnet 1 (for RDS)
 resource "aws_subnet" "private_subnet_1" {
   vpc_id                  = aws_vpc.forum_vpc.id
-  cidr_block              = "10.1.2.0/24"
+  cidr_block              = "10.2.1.0/24"
   availability_zone       = "us-east-1a"
 }
 
 # Private Subnet 2 (for RDS in different AZ)
 resource "aws_subnet" "private_subnet_2" {
   vpc_id                  = aws_vpc.forum_vpc.id
-  cidr_block              = "10.1.4.0/24"
+  cidr_block              = "10.2.2.0/24"
   availability_zone       = "us-east-1b"
 }
 
