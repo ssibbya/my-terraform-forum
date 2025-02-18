@@ -77,9 +77,8 @@ resource "aws_launch_template" "forum_lt" {
   }
 }
 
-# Auto Scaling Group
 resource "aws_autoscaling_group" "forum_asg" {
-  vpc_zone_identifier = [aws_subnet.public_subnet.id]
+  vpc_zone_identifier = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id] # Use both public subnets
   desired_capacity    = 2
   min_size           = 1
   max_size           = 3
