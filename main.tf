@@ -23,7 +23,7 @@ resource "aws_subnet" "public_subnet_2" {
   map_public_ip_on_launch = true
 }
 
-# Private Subnet 1 (for RDS)
+# Private Subnet 1 for RDS
 resource "aws_subnet" "private_subnet_1" {
   vpc_id                  = aws_vpc.forum_vpc.id
   cidr_block              = "10.2.1.0/24"
