@@ -13,7 +13,13 @@ resource "aws_subnet" "public_subnet" {
   cidr_block = "10.1.1.0/24"
   map_public_ip_on_launch = true
 }
-
+# Public Subnet 2 (New Subnet in Different AZ)
+resource "aws_subnet" "public_subnet_2" {
+  vpc_id                  = aws_vpc.forum_vpc.id
+  cidr_block              = "10.1.3.0/24"
+  availability_zone       = "us-east-1b" # Change based on your AWS region
+  map_public_ip_on_launch = true
+}
 resource "aws_subnet" "private_subnet" {
   vpc_id     = aws_vpc.forum_vpc.id
   cidr_block = "10.1.2.0/24"
@@ -37,7 +43,7 @@ resource "aws_lb" "forum_alb" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.forum_sg.id]
-  subnets            = [aws_subnet.public_subnet.id]
+  subnets            = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id] # Use both subnets
 }
 
 # Launch Template
@@ -71,7 +77,15 @@ resource "aws_autoscaling_group" "forum_asg" {
     version = "$Latest"
   }
 }
+resource "aws_db_subnet_group" "forum_db_subnet_group" {
+  name       = "forum-db-subnet-group"
+  subnet_ids = [aws_subnet.private_subnet.id] # Add more private subnets if needed
+  description = "DB subnet group for forum application"
 
+  tags = {
+    Name = "forum-db-subnet-group"
+  }
+}
 # RDS Database
 resource "aws_db_instance" "forum_db" {
   allocated_storage    = 20
@@ -80,6 +94,7 @@ resource "aws_db_instance" "forum_db" {
   username           = "admin"
   password           = "changeme123"
   vpc_security_group_ids = [aws_security_group.forum_sg.id]
-  db_subnet_group_name   = aws_subnet.private_subnet.id
+  db_subnet_group_name   = aws_db_subnet_group.forum_db_subnet_group.name
   skip_final_snapshot = true
 }
+
