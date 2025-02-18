@@ -23,6 +23,32 @@ resource "aws_subnet" "public_subnet_2" {
   map_public_ip_on_launch = true
 }
 
+# Internet Gateway
+resource "aws_internet_gateway" "forum_igw" {
+  vpc_id = aws_vpc.forum_vpc.id
+}
+
+# Public Route Table
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.forum_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.forum_igw.id
+  }
+}
+
+# Associate Public Route Table with Public Subnets
+resource "aws_route_table_association" "public_rt_assoc_1" {
+  subnet_id      = aws_subnet.public_subnet_1.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
+resource "aws_route_table_association" "public_rt_assoc_2" {
+  subnet_id      = aws_subnet.public_subnet_2.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
 # Private Subnet 1 for RDS
 resource "aws_subnet" "private_subnet_1" {
   vpc_id                  = aws_vpc.forum_vpc.id
@@ -35,6 +61,37 @@ resource "aws_subnet" "private_subnet_2" {
   vpc_id                  = aws_vpc.forum_vpc.id
   cidr_block              = "10.1.40.0/24"
   availability_zone       = "us-east-1b"
+}
+# Elastic IP for NAT Gateway
+resource "aws_eip" "nat_eip" {
+  domain = "vpc"
+}
+
+# NAT Gateway (placed in a public subnet)
+resource "aws_nat_gateway" "forum_nat_gw" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public_subnet_1.id
+}
+
+# Private Route Table (NAT for Internet Access)
+resource "aws_route_table" "private_rt" {
+  vpc_id = aws_vpc.forum_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.forum_nat_gw.id
+  }
+}
+
+# Associate Private Route Table with Private Subnets
+resource "aws_route_table_association" "private_rt_assoc_1" {
+  subnet_id      = aws_subnet.private_subnet_1.id
+  route_table_id = aws_route_table.private_rt.id
+}
+
+resource "aws_route_table_association" "private_rt_assoc_2" {
+  subnet_id      = aws_subnet.private_subnet_2.id
+  route_table_id = aws_route_table.private_rt.id
 }
 
 # Security Group
