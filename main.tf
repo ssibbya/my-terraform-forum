@@ -10,7 +10,7 @@ resource "aws_vpc" "forum_vpc" {
 # Public Subnet 1 in us-east-1a
 resource "aws_subnet" "public_subnet_1" {
   vpc_id                  = aws_vpc.forum_vpc.id
-  cidr_block              = "10.1.1.0/24"
+  cidr_block              = "10.1.10.0/24"
   availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
 }
@@ -18,7 +18,7 @@ resource "aws_subnet" "public_subnet_1" {
 # Public Subnet 2 in us-east-1b
 resource "aws_subnet" "public_subnet_2" {
   vpc_id                  = aws_vpc.forum_vpc.id
-  cidr_block              = "10.1.3.0/24"
+  cidr_block              = "10.1.20.0/24"
   availability_zone       = "us-east-1b"
   map_public_ip_on_launch = true
 }
@@ -26,14 +26,14 @@ resource "aws_subnet" "public_subnet_2" {
 # Private Subnet 1 for RDS
 resource "aws_subnet" "private_subnet_1" {
   vpc_id                  = aws_vpc.forum_vpc.id
-  cidr_block              = "10.2.1.0/24"
+  cidr_block              = "10.1.30.0/24"
   availability_zone       = "us-east-1a"
 }
 
 # Private Subnet 2 (for RDS in different AZ)
 resource "aws_subnet" "private_subnet_2" {
   vpc_id                  = aws_vpc.forum_vpc.id
-  cidr_block              = "10.2.2.0/24"
+  cidr_block              = "10.1.40.0/24"
   availability_zone       = "us-east-1b"
 }
 
