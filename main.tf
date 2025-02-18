@@ -1,8 +1,8 @@
 provider "aws" {
-  region = var.aws_region
+  region = "us-east-1"
 
   assume_role {
-    role_arn     = var.aws_role_arn
+    role_arn     = "arn:aws:iam::940482446197:role/TerraformCloudRole"
     session_name = "TerraformCloudSession"
   }
 }
