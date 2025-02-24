@@ -154,13 +154,15 @@ Name = "forum_alb"
 # Launch Template
 resource "aws_launch_template" "forum_lt" {
   name_prefix   = "forum-template"
-  image_id      = "ami-053a45fff0a704a47"
+  image_id      = "ami-053a45fff0a704a47" # Amazon Linux 2 AMI
   instance_type = "t2.micro"
 
   network_interfaces {
     associate_public_ip_address = true
     security_groups             = [aws_security_group.forum_sg.id]
   }
+
+  user_data = filebase64("user-data.sh") # Load User Data from a script file
 
   tag_specifications {
     resource_type = "instance"
