@@ -180,9 +180,6 @@ resource "aws_autoscaling_group" "forum_asg" {
     id      = aws_launch_template.forum_lt.id
     version = "$Latest"
   }
-tags {
-Name = "forum_asg"
-}
 }
 
 # DB Subnet Group for RDS
