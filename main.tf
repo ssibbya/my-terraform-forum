@@ -57,17 +57,11 @@ Name = "public_rt"
 resource "aws_route_table_association" "public_rt_assoc_1" {
   subnet_id      = aws_subnet.public_subnet_1.id
   route_table_id = aws_route_table.public_rt.id
-tags = {
-Name = "public_rt_assoc_1"
-}
 }
 
 resource "aws_route_table_association" "public_rt_assoc_2" {
   subnet_id      = aws_subnet.public_subnet_2.id
   route_table_id = aws_route_table.public_rt.id
-tags = {
-Name = "public_rt_assoc_2"
-}
 }
 
 # Private Subnet 1 for RDS
@@ -123,17 +117,11 @@ Name = "private_rt"
 resource "aws_route_table_association" "private_rt_assoc_1" {
   subnet_id      = aws_subnet.private_subnet_1.id
   route_table_id = aws_route_table.private_rt.id
-tags = {
-Name = "private_rt_assoc_2"
-}
 }
 
 resource "aws_route_table_association" "private_rt_assoc_2" {
   subnet_id      = aws_subnet.private_subnet_2.id
   route_table_id = aws_route_table.private_rt.id
-tags = {
-Name = "private_rt_assoc_2"
-}
 }
 
 # Security Group
@@ -172,9 +160,6 @@ resource "aws_launch_template" "forum_lt" {
   network_interfaces {
     associate_public_ip_address = true
     security_groups             = [aws_security_group.forum_sg.id]
-tags = {
-Name = "forum_lt"
-}
   }
 
   tag_specifications {
@@ -195,6 +180,9 @@ resource "aws_autoscaling_group" "forum_asg" {
     id      = aws_launch_template.forum_lt.id
     version = "$Latest"
   }
+tags {
+Name = "forum_asg"
+}
 }
 
 # DB Subnet Group for RDS
