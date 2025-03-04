@@ -141,9 +141,9 @@ resource "aws_lb_listener" "http" {
 # EC2 Launch Template
 resource "aws_launch_template" "forum_lt" {
   name_prefix   = "forum-lt"
-  image_id      = "ami-0c55b159cbfafe1f0"  # Update AMI ID
+  image_id      = "ami-05b10e08d247fb927"  # Update AMI ID
   instance_type = "t3.micro"
-  key_name      = "your-key"  # Update your SSH key
+  key_name      = "my ssh key.pem"  # Update your SSH key
 
   network_interfaces {
     associate_public_ip_address = false
@@ -165,7 +165,7 @@ resource "aws_launch_template" "forum_lt" {
 resource "aws_autoscaling_group" "forum_asg" {
   vpc_zone_identifier = [aws_subnet.private_subnet_1.id, aws_subnet.private_subnet_2.id]
   desired_capacity    = 2
-  max_size           = 4
+  max_size           = 3
   min_size           = 1
 
   launch_template {
