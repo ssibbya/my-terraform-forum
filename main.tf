@@ -1,131 +1,97 @@
 provider "aws" {
-  region = "us-east-1"
+  region = "us-east-1"  # Change as needed
 }
 
 # VPC
 resource "aws_vpc" "forum_vpc" {
-  cidr_block = "10.1.0.0/16"
-tags = {
-Name = "forum_vpc"
-}
+  cidr_block = "10.0.0.0/16"
 }
 
-# Public Subnet 1 in us-east-1a
+# Public Subnets
 resource "aws_subnet" "public_subnet_1" {
-  vpc_id                  = aws_vpc.forum_vpc.id
-  cidr_block              = "10.1.10.0/24"
-  availability_zone       = "us-east-1a"
+  vpc_id            = aws_vpc.forum_vpc.id
+  cidr_block        = "10.0.1.0/24"
   map_public_ip_on_launch = true
-tags = {
-Name = "public_subnet_1"
-}
+  availability_zone = "us-east-1a"
 }
 
-# Public Subnet 2 in us-east-1b
 resource "aws_subnet" "public_subnet_2" {
-  vpc_id                  = aws_vpc.forum_vpc.id
-  cidr_block              = "10.1.20.0/24"
-  availability_zone       = "us-east-1b"
+  vpc_id            = aws_vpc.forum_vpc.id
+  cidr_block        = "10.0.2.0/24"
   map_public_ip_on_launch = true
-tags = {
-Name = "public_subnet_2"
+  availability_zone = "us-east-1b"
 }
+
+# Private Subnets (For EC2 & RDS)
+resource "aws_subnet" "private_subnet_1" {
+  vpc_id            = aws_vpc.forum_vpc.id
+  cidr_block        = "10.0.3.0/24"
+  availability_zone = "us-east-1a"
+}
+
+resource "aws_subnet" "private_subnet_2" {
+  vpc_id            = aws_vpc.forum_vpc.id
+  cidr_block        = "10.0.4.0/24"
+  availability_zone = "us-east-1b"
 }
 
 # Internet Gateway
-resource "aws_internet_gateway" "forum_igw" {
+resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.forum_vpc.id
-tags = {
-Name = "forum_igw"
-}
 }
 
-# Public Route Table
+# Route Table
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.forum_vpc.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.forum_igw.id
-  }
-tags = {
-Name = "public_rt"
-}
 }
 
-# Associate Public Route Table with Public Subnets
-resource "aws_route_table_association" "public_rt_assoc_1" {
+resource "aws_route" "public_internet_access" {
+  route_table_id         = aws_route_table.public_rt.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.gw.id
+}
+
+resource "aws_route_table_association" "public_1" {
   subnet_id      = aws_subnet.public_subnet_1.id
   route_table_id = aws_route_table.public_rt.id
 }
 
-resource "aws_route_table_association" "public_rt_assoc_2" {
+resource "aws_route_table_association" "public_2" {
   subnet_id      = aws_subnet.public_subnet_2.id
   route_table_id = aws_route_table.public_rt.id
 }
 
-# Private Subnet 1 for RDS
-resource "aws_subnet" "private_subnet_1" {
-  vpc_id                  = aws_vpc.forum_vpc.id
-  cidr_block              = "10.1.30.0/24"
-  availability_zone       = "us-east-1a"
-tags = {
-Name = "private_subnet_1"
-}
-}
+# NAT Gateway
+resource "aws_eip" "nat_eip" {}
 
-# Private Subnet 2 (for RDS in different AZ)
-resource "aws_subnet" "private_subnet_2" {
-  vpc_id                  = aws_vpc.forum_vpc.id
-  cidr_block              = "10.1.40.0/24"
-  availability_zone       = "us-east-1b"
-tags = {
-Name = "private_subnet_2"
-}
-}
-# Elastic IP for NAT Gateway
-resource "aws_eip" "nat_eip" {
-  domain = "vpc"
-tags = {
-Name = "nat_eip"
-}
-}
-
-# NAT Gateway (placed in a public subnet)
-resource "aws_nat_gateway" "forum_nat_gw" {
+resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat_eip.id
   subnet_id     = aws_subnet.public_subnet_1.id
-tags = {
-Name = "forum_nat_igw"
-}
 }
 
-# Private Route Table (NAT for Internet Access)
+# Private Route Table
 resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.forum_vpc.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.forum_nat_gw.id
-  }
-tags = {
-Name = "private_rt"
-}
 }
 
-# Associate Private Route Table with Private Subnets
-resource "aws_route_table_association" "private_rt_assoc_1" {
+resource "aws_route" "private_nat_gateway" {
+  route_table_id         = aws_route_table.private_rt.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.nat.id
+}
+
+resource "aws_route_table_association" "private_1" {
   subnet_id      = aws_subnet.private_subnet_1.id
   route_table_id = aws_route_table.private_rt.id
 }
 
-resource "aws_route_table_association" "private_rt_assoc_2" {
+resource "aws_route_table_association" "private_2" {
   subnet_id      = aws_subnet.private_subnet_2.id
   route_table_id = aws_route_table.private_rt.id
 }
 
-# Security Group
-resource "aws_security_group" "forum_sg" {
+# Security Group for ALB
+resource "aws_security_group" "alb_sg" {
   vpc_id = aws_vpc.forum_vpc.id
   
   ingress {
@@ -134,49 +100,73 @@ resource "aws_security_group" "forum_sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-tags = {
-Name = "forum_sg"
-}
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-# Modify ALB to use both subnets
+# Application Load Balancer (ALB)
 resource "aws_lb" "forum_alb" {
   name               = "forum-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.forum_sg.id]
+  security_groups    = [aws_security_group.alb_sg.id]
   subnets            = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
-tags = {
-Name = "forum_alb"
-}
 }
 
-# Launch Template
+# Target Group for ALB
+resource "aws_lb_target_group" "tg" {
+  name     = "forum-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.forum_vpc.id
+}
+
+# Listener
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.forum_alb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.tg.arn
+  }
+}
+
+# EC2 Launch Template
 resource "aws_launch_template" "forum_lt" {
-  name_prefix   = "forum-template"
-  image_id      = "ami-053a45fff0a704a47" # Amazon Linux 2 AMI
-  instance_type = "t2.micro"
+  name_prefix   = "forum-lt"
+  image_id      = "ami-0c55b159cbfafe1f0"  # Update AMI ID
+  instance_type = "t3.micro"
+  key_name      = "your-key"  # Update your SSH key
 
   network_interfaces {
-    associate_public_ip_address = true
-    security_groups             = [aws_security_group.forum_sg.id]
+    associate_public_ip_address = false
+    security_groups             = [aws_security_group.alb_sg.id]
   }
 
-  user_data = filebase64("user-data.sh") # Load User Data from a script file
-
-  tag_specifications {
-    resource_type = "instance"
-    tags = {
-      Name = "ForumInstance"
-    }
-  }
+  user_data = base64encode(<<-EOF
+              #!/bin/bash
+              sudo yum update -y
+              sudo yum install -y httpd
+              sudo systemctl start httpd
+              sudo systemctl enable httpd
+              echo "Forum App Running!" > /var/www/html/index.html
+            EOF
+  )
 }
 
+# Auto Scaling Group
 resource "aws_autoscaling_group" "forum_asg" {
-  vpc_zone_identifier = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id] # Use both public subnets
+  vpc_zone_identifier = [aws_subnet.private_subnet_1.id, aws_subnet.private_subnet_2.id]
   desired_capacity    = 2
+  max_size           = 4
   min_size           = 1
-  max_size           = 3
 
   launch_template {
     id      = aws_launch_template.forum_lt.id
@@ -184,28 +174,25 @@ resource "aws_autoscaling_group" "forum_asg" {
   }
 }
 
-# DB Subnet Group for RDS
-resource "aws_db_subnet_group" "forum_db_subnet_group" {
-  name       = "forum-db-subnet-group"
-  subnet_ids = [aws_subnet.private_subnet_1.id, aws_subnet.private_subnet_2.id] # Two subnets in different AZs
-  description = "Subnet group for forum database"
-tags = {
-Name = "forum_db_subnet_group"
-}
-}
-
-# Modify RDS to reference the DB subnet group
+# RDS Database (PostgreSQL)
 resource "aws_db_instance" "forum_db" {
-  allocated_storage    = 20
-  engine              = "mysql"
-  instance_class      = "db.t3.micro"
-  username           = "admin"
-  password           = "changeme123"
-  vpc_security_group_ids = [aws_security_group.forum_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.forum_db_subnet_group.name
-  skip_final_snapshot = true
-tags = {
-Name = "forum_db"
-}
+  identifier             = "forum-db"
+  engine                 = "postgres"
+  instance_class         = "db.t3.medium"
+  allocated_storage      = 20
+  max_allocated_storage  = 100
+  db_name                = "forumdb"
+  username              = "admin"
+  password              = "yourpassword"
+  publicly_accessible    = false
+  skip_final_snapshot    = true
+  multi_az              = true
+  vpc_security_group_ids = [aws_security_group.alb_sg.id]
+  db_subnet_group_name   = aws_db_subnet_group.db_subnet.id
 }
 
+# Database Subnet Group
+resource "aws_db_subnet_group" "db_subnet" {
+  name       = "forum-db-subnet"
+  subnet_ids = [aws_subnet.private_subnet_1.id, aws_subnet.private_subnet_2.id]
+}
