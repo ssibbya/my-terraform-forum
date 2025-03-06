@@ -175,7 +175,12 @@ resource "aws_security_group" "ec2_sg" {
     protocol    = "tcp"
     security_groups = [aws_security_group.alb_sg.id] # Only ALB can access EC2
   }
-
+egress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
   egress {
     from_port   = 0
     to_port     = 0
@@ -183,6 +188,30 @@ resource "aws_security_group" "ec2_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.${var.region}.ssm"
+  vpc_endpoint_type = "Interface"
+  subnet_ids   = [aws_subnet.private1.id]
+  security_group_ids = [aws_security_group.ssm_endpoint_sg.id]
+}
+
+resource "aws_vpc_endpoint" "ec2messages" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.${var.region}.ec2messages"
+  vpc_endpoint_type = "Interface"
+  subnet_ids   = [aws_subnet.private1.id]
+  security_group_ids = [aws_security_group.ssm_endpoint_sg.id]
+}
+
+resource "aws_vpc_endpoint" "ssmmessages" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.${var.region}.ssmmessages"
+  vpc_endpoint_type = "Interface"
+  subnet_ids   = [aws_subnet.private1.id]
+  security_group_ids = [aws_security_group.ssm_endpoint_sg.id]
+}
+
 #EC2 IAM Role
 resource "aws_iam_role" "ec2_role" {
   name = "forum-ec2-role"
@@ -214,9 +243,10 @@ resource "aws_launch_template" "forum_lt" {
   image_id      = "ami-05b10e08d247fb927"  # Update AMI ID
   instance_type = "t3.micro"
 
-  network_interfaces {
-    associate_public_ip_address = false
+ network_interfaces {
+    associate_public_ip_address = false  # Must remain false (private subnet)
     security_groups             = [aws_security_group.ec2_sg.id]
+    subnet_id                   = aws_subnet.private1.id  # Ensure correct subnet
   }
 
   # Attach IAM Profile to EC2
