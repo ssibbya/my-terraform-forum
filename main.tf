@@ -193,7 +193,7 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 # EC2 Launch Template
 resource "aws_launch_template" "forum_lt" {
   name_prefix   = "forum-lt"
-  image_id      = "ami-0f37c4a1ba152af46"  # Update AMI ID
+  image_id      = "ami-05b10e08d247fb927"  # Update AMI ID
   instance_type = "t3.micro"
   key_name      = "my ssh key"  # Update your SSH key
 
@@ -260,7 +260,7 @@ resource "aws_db_instance" "forum_db" {
   allocated_storage      = 20
   max_allocated_storage  = 100
   db_name                = "forumdb"
-  username              = "admin"
+  username              = "dbadmin"
   password              = "yourpassword"
   publicly_accessible    = false
   skip_final_snapshot    = true
