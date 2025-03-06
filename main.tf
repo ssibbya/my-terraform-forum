@@ -78,7 +78,7 @@ resource "aws_route_table_association" "public_2" {
 
 # NAT Gateway
 resource "aws_eip" "nat_eip" {
-  doforum_vpc = "vpc"
+  domain = "vpc"
 }
 
 resource "aws_nat_gateway" "nat" {
@@ -190,7 +190,7 @@ egress {
 }
 resource "aws_vpc_endpoint" "ssm" {
   vpc_id       = aws_vpc.forum_vpc.id
-  service_name = "com.amazonaws.${var.region}.ssm"
+  service_name = "com.amazonaws.us-east-1.ssm"
   vpc_endpoint_type = "Interface"
   subnet_ids   = [aws_subnet.private_subnet_1.id]
   security_group_ids = [aws_security_group.ec2_sg.id]
@@ -198,7 +198,7 @@ resource "aws_vpc_endpoint" "ssm" {
 
 resource "aws_vpc_endpoint" "ec2messages" {
   vpc_id       = aws_vpc.forum_vpc.id
-  service_name = "com.amazonaws.${var.region}.ec2messages"
+  service_name = "com.amazonaws.us-east-1.ec2messages"
   vpc_endpoint_type = "Interface"
   subnet_ids   = [aws_subnet.private_subnet_1.id]
   security_group_ids = [aws_security_group.ec2_sg.id]
@@ -206,7 +206,7 @@ resource "aws_vpc_endpoint" "ec2messages" {
 
 resource "aws_vpc_endpoint" "ssmmessages" {
   vpc_id       = aws_vpc.forum_vpc.id
-  service_name = "com.amazonaws.${var.region}.ssmmessages"
+  service_name = "com.amazonaws.us-east-1.ssmmessages"
   vpc_endpoint_type = "Interface"
   subnet_ids   = [aws_subnet.private_subnet_1.id]
   security_group_ids = [aws_security_group.ec2_sg.id]
