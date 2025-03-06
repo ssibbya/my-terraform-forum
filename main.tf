@@ -62,7 +62,9 @@ resource "aws_route_table_association" "public_2" {
 }
 
 # NAT Gateway
-resource "aws_eip" "nat_eip" {}
+resource "aws_eip" "nat_eip" {
+  domain = "vpc"
+}
 
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat_eip.id
@@ -124,6 +126,14 @@ resource "aws_lb_target_group" "tg" {
   port     = 80
   protocol = "HTTP"
   vpc_id   = aws_vpc.forum_vpc.id
+
+  health_check {
+    path                = "/"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
 }
 
 # Listener
@@ -137,7 +147,49 @@ resource "aws_lb_listener" "http" {
     target_group_arn = aws_lb_target_group.tg.arn
   }
 }
+#EC2 Security Group
+resource "aws_security_group" "ec2_sg" {
+  vpc_id = aws_vpc.forum_vpc.id
 
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    security_groups = [aws_security_group.alb_sg.id] # Only ALB can access EC2
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+#EC2 IAM Role
+resource "aws_iam_role" "ec2_role" {
+  name = "forum-ec2-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_s3_policy" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+}
+
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "forum-ec2-profile"
+  role = aws_iam_role.ec2_role.name
+}
 # EC2 Launch Template
 resource "aws_launch_template" "forum_lt" {
   name_prefix   = "forum-lt"
@@ -146,10 +198,12 @@ resource "aws_launch_template" "forum_lt" {
   key_name      = "my ssh key"  # Update your SSH key
 
   network_interfaces {
-    associate_public_ip_address = false
-    security_groups             = [aws_security_group.alb_sg.id]
-  }
-
+  associate_public_ip_address = false
+  security_groups             = [aws_security_group.ec2_sg.id]
+}
+iam_instance_profile {
+  name = aws_iam_instance_profile.ec2_profile.name
+}
   user_data = base64encode(<<-EOF
               #!/bin/bash
               sudo yum update -y
@@ -168,9 +222,33 @@ resource "aws_autoscaling_group" "forum_asg" {
   max_size           = 3
   min_size           = 1
 
+  health_check_type         = "ELB"
+  health_check_grace_period = 300
+
   launch_template {
     id      = aws_launch_template.forum_lt.id
     version = "$Latest"
+  }
+
+  target_group_arns = [aws_lb_target_group.tg.arn] # Link ASG to ALB Target Group
+}
+
+#RDS Security Group
+resource "aws_security_group" "rds_sg" {
+  vpc_id = aws_vpc.forum_vpc.id
+
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    security_groups = [aws_security_group.ec2_sg.id] # Only EC2 can access DB
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -178,7 +256,7 @@ resource "aws_autoscaling_group" "forum_asg" {
 resource "aws_db_instance" "forum_db" {
   identifier             = "forum-db"
   engine                 = "postgres"
-  instance_class         = "db.t3.medium"
+  instance_class         = "db.t2.micro"
   allocated_storage      = 20
   max_allocated_storage  = 100
   db_name                = "forumdb"
@@ -187,7 +265,7 @@ resource "aws_db_instance" "forum_db" {
   publicly_accessible    = false
   skip_final_snapshot    = true
   multi_az              = true
-  vpc_security_group_ids = [aws_security_group.alb_sg.id]
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
   db_subnet_group_name   = aws_db_subnet_group.db_subnet.id
 }
 
