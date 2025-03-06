@@ -194,7 +194,7 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 resource "aws_launch_template" "forum_lt" {
   name_prefix   = "forum-lt"
   image_id      = "ami-0f37c4a1ba152af46"  # Update AMI ID
-  instance_type = "t2.micro"
+  instance_type = "t3.micro"
   key_name      = "my ssh key"  # Update your SSH key
 
   network_interfaces {
@@ -256,7 +256,7 @@ resource "aws_security_group" "rds_sg" {
 resource "aws_db_instance" "forum_db" {
   identifier             = "forum-db"
   engine                 = "postgres"
-  instance_class         = "db.t2.micro"
+  instance_class         = "db.t3.micro"
   allocated_storage      = 20
   max_allocated_storage  = 100
   db_name                = "forumdb"
