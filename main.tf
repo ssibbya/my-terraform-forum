@@ -199,9 +199,9 @@ resource "aws_iam_role" "ec2_role" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "ec2_s3_policy" {
+resource "aws_iam_role_policy_attachment" "ec2_ssm_policy" {
   role       = aws_iam_role.ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_instance_profile" "ec2_profile" {
@@ -213,15 +213,17 @@ resource "aws_launch_template" "forum_lt" {
   name_prefix   = "forum-lt"
   image_id      = "ami-05b10e08d247fb927"  # Update AMI ID
   instance_type = "t3.micro"
-  key_name      = "my-ssh-key"  # Update your SSH key
 
   network_interfaces {
-  associate_public_ip_address = false
-  security_groups             = [aws_security_group.ec2_sg.id]
-}
-iam_instance_profile {
-  name = aws_iam_instance_profile.ec2_profile.name
-}
+    associate_public_ip_address = false
+    security_groups             = [aws_security_group.ec2_sg.id]
+  }
+
+  # Attach IAM Profile to EC2
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ec2_profile.name
+  }
+
   user_data = base64encode(<<-EOF
               #!/bin/bash
               sudo yum update -y
@@ -232,6 +234,7 @@ iam_instance_profile {
             EOF
   )
 }
+
 
 # Auto Scaling Group
 resource "aws_autoscaling_group" "forum_asg" {
