@@ -213,7 +213,7 @@ resource "aws_launch_template" "forum_lt" {
   name_prefix   = "forum-lt"
   image_id      = "ami-05b10e08d247fb927"  # Update AMI ID
   instance_type = "t3.micro"
-  key_name      = "my ssh key"  # Update your SSH key
+  key_name      = "my-ssh-key"  # Update your SSH key
 
   network_interfaces {
   associate_public_ip_address = false
