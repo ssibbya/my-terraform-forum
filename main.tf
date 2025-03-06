@@ -78,7 +78,7 @@ resource "aws_route_table_association" "public_2" {
 
 # NAT Gateway
 resource "aws_eip" "nat_eip" {
-  domain = "vpc"
+  doforum_vpc = "vpc"
 }
 
 resource "aws_nat_gateway" "nat" {
@@ -189,27 +189,27 @@ egress {
   }
 }
 resource "aws_vpc_endpoint" "ssm" {
-  vpc_id       = aws_vpc.main.id
+  vpc_id       = aws_vpc.forum_vpc.id
   service_name = "com.amazonaws.${var.region}.ssm"
   vpc_endpoint_type = "Interface"
-  subnet_ids   = [aws_subnet.private1.id]
-  security_group_ids = [aws_security_group.ssm_endpoint_sg.id]
+  subnet_ids   = [aws_subnet.private_subnet_1.id]
+  security_group_ids = [aws_security_group.ec2_sg.id]
 }
 
 resource "aws_vpc_endpoint" "ec2messages" {
-  vpc_id       = aws_vpc.main.id
+  vpc_id       = aws_vpc.forum_vpc.id
   service_name = "com.amazonaws.${var.region}.ec2messages"
   vpc_endpoint_type = "Interface"
-  subnet_ids   = [aws_subnet.private1.id]
-  security_group_ids = [aws_security_group.ssm_endpoint_sg.id]
+  subnet_ids   = [aws_subnet.private_subnet_1.id]
+  security_group_ids = [aws_security_group.ec2_sg.id]
 }
 
 resource "aws_vpc_endpoint" "ssmmessages" {
-  vpc_id       = aws_vpc.main.id
+  vpc_id       = aws_vpc.forum_vpc.id
   service_name = "com.amazonaws.${var.region}.ssmmessages"
   vpc_endpoint_type = "Interface"
-  subnet_ids   = [aws_subnet.private1.id]
-  security_group_ids = [aws_security_group.ssm_endpoint_sg.id]
+  subnet_ids   = [aws_subnet.private_subnet_1.id]
+  security_group_ids = [aws_security_group.ec2_sg.id]
 }
 
 #EC2 IAM Role
@@ -244,9 +244,9 @@ resource "aws_launch_template" "forum_lt" {
   instance_type = "t3.micro"
 
  network_interfaces {
-    associate_public_ip_address = false  # Must remain false (private subnet)
+    associate_public_ip_address = false  # Must reforum_vpc false (private subnet)
     security_groups             = [aws_security_group.ec2_sg.id]
-    subnet_id                   = aws_subnet.private1.id  # Ensure correct subnet
+    subnet_id                   = aws_subnet.private_subnet_1.id  # Ensure correct subnet
   }
 
   # Attach IAM Profile to EC2
