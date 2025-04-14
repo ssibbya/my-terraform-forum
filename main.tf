@@ -240,7 +240,7 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 # EC2 Launch Template
 resource "aws_launch_template" "forum_lt" {
   name_prefix   = "forum-lt"
-  image_id      = "ami-05b10e08d247fb927"  # Update AMI ID
+  image_id      = "UPDATE_YOUR_AMI_ID"  
   instance_type = "t3.micro"
 
  network_interfaces {
